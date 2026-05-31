@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Gnod Food",
+  "description": "Premium Vietnamese dried seafood landing page with modern, minimalist sea-inspired design and an interactive AI Recipe Planner",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
