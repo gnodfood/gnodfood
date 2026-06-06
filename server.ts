@@ -74,6 +74,75 @@ Hãy trình bày rõ ràng, sử dụng Markdown, khoảng cách dòng thoáng v
   }
 });
 
+// AI Chatbot API
+app.post("/api/chatbot", async (req, res) => {
+  try {
+    const { messages } = req.body;
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      res.status(400).json({ error: "Yêu cầu có danh sách tin nhắn." });
+      return;
+    }
+
+    const ai = getGeminiClient();
+
+    // Map messages to Gemini API format (role: user/model)
+    const contents = messages.map((m: any) => ({
+      role: m.sender === "user" ? "user" : "model",
+      parts: [{ text: m.text }],
+    }));
+
+    const systemInstruction = `Bạn là Trợ lý Ảo Thông Minh Gnod Food (Gnod AI Chatbot) - Thương hiệu Khô Hải Sản Sạch Thượng Hạng hàng đầu tại Việt Nam.
+
+Hệ thống sản phẩm chính của Gnod Food gồm có:
+1. Mực Khô Vỉa Cát Phú Quốc: Mực xẻ sấy nhiệt sạch cát từ đảo Ngọc, ngọt thơm đậm đà, không tanh bụi bẩn bè nổi.
+2. Khô Cá Đuối Nghệ Sụn: Làm từ loài đuối nghệ sụn mềm ngọt xắt mỏng vừa vặn, ăn kèm xốt mắm me gia truyền dẻo kẹo cay cay chua ngọt đặc trưng.
+3. Tôm Đất Cà Mau Sấy Đất Mũi: Tôm đất thiên nhiên mẩy ngọt sấy giữ độ ẩm mềm lý tưởng mọng ngọt không khô cứng.
+
+Triết lý thương hiệu:
+- "SẠCH CỰC ĐOAN - 4 KHÔNG":
+  1. Không phẩm màu, hóa chất nhuộm màu.
+  2. Không chất bảo quản tổng hợp cực đoan gây hại.
+  3. Không phụ gia tạo ngọt hóa học (không bột ngọt dồi dào, ngọt từ hải sản tự nhiên).
+  4. Không phơi xả bừa bãi bụi bẩn côn trùng.
+- Quy cách đóng gói tinh tế: Đóng hũ tròn PET sạch sẽ sang trọng hoặc túi chân không tối giản làm quà tặng chữ TÂM.
+- Phong vị ẩm thực: Nhạt muối, tự nhiên, thích hợp ăn vui, nhậu lành mạnh kết nối bè bạn gia đình.
+
+Chính sách & dịch vụ nổi bật:
+- CHÍNH SÁCH VÀNG 7 NGÀY: Bao đổi trả hoàn tiền 100% nếu khách không ưng ý, mốc, hôi dầu hoặc vỡ hũ khi vận chuyển.
+- GIAO HỎA TỐC 2H: Phục vụ nhanh tại các khu vực nội thành Trung tâm TP. Hồ Chí Minh và TP. Vũng Tàu.
+- Hỗ trợ giao hàng toàn quốc đồng kiểm trước khi nhận.
+
+Tuyển dụng nổi bật:
+- Trưởng Phòng Phân Phối (Mức lương 20 - 35 triệu VNĐ/tháng + Thưởng doanh số).
+
+Liên hệ:
+- Email đối tác sỉ: partner@gnodfood.vn
+- Có form hỗ trợ phản hồi và ứng tuyển trực tiếp ngay trên trang mạng này.
+
+Quy tắc giao tiếp của chatbot:
+- Xưng hô lịch thiệp, ấm áp, nhã nhặn, mang đậm tinh thần của sản phẩm quà tặng tinh hoa bờ biển Việt.
+- Sử dụng tiếng Việt chuẩn. Trả lời súc tích, ngắn gọn, có cấu trúc rõ ràng với các gạch đầu dòng hoặc in đậm để dễ đọc.
+- Tuyệt đối không tự bịa ra thông tin sai lý lịch hoặc giá cả ngoài các chi tiết trên.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: contents,
+      config: {
+        systemInstruction: systemInstruction,
+        temperature: 0.7,
+      },
+    });
+
+    const reply = response.text || "Dạ, tôi chưa kịp hiểu ý bạn. Bạn có thể hỏi lại được không ạ?";
+    res.json({ reply });
+  } catch (error: any) {
+    console.error("Chatbot API Error:", error);
+    res.status(500).json({
+      error: "Không thể kết nối với Gnod AI vào lúc này. " + (error.message || ""),
+    });
+  }
+});
+
 // Mock Application / Contact form endpoint to show functional integration
 app.post("/api/contact", (req, res) => {
   const { name, phone, email, message, interest } = req.body;

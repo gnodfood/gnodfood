@@ -1,0 +1,49 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with details",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Authenticated user UID" },
+        "displayName": { "type": "string", "description": "Display name of customer" },
+        "photoURL": { "type": "string", "description": "Profile picture URL" },
+        "email": { "type": "string", "description": "Contact email of user" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp when account was created" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Timestamp when account was updated" }
+      },
+      "required": ["userId", "displayName", "email", "createdAt", "updatedAt"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Order records placed by customer accounts",
+      "type": "object",
+      "properties": {
+        "orderId": { "type": "string", "description": "Unique order ID" },
+        "ownerId": { "type": "string", "description": "UID of the user who owns this order" },
+        "recipientName": { "type": "string", "description": "Recipient full name" },
+        "recipientPhone": { "type": "string", "description": "Recipient phone number" },
+        "shippingAddress": { "type": "string", "description": "Destination shipping address" },
+        "deliveryMethod": { "type": "string", "description": "Delivery method: standard or express" },
+        "items": { "type": "array", "description": "List of ordered items" },
+        "totalAmount": { "type": "number", "description": "Total cart products cost" },
+        "shippingFee": { "type": "number", "description": "Vận chuyển fee" },
+        "notes": { "type": "string", "description": "Customer message or delivery notes" },
+        "status": { "type": "string", "description": "Status of the order" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Order placement timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Order modification timestamp" }
+      },
+      "required": ["orderId", "ownerId", "recipientName", "recipientPhone", "shippingAddress", "deliveryMethod", "totalAmount", "shippingFee", "status", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile collection with secure access bounds"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Stores customer purchase logs"
+    }
+  }
+}

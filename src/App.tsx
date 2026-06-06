@@ -1,10 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Header from "./components/Header";
 import GnodLogo from "./components/GnodLogo";
 import AIChef from "./components/AIChef";
 import BlogSection from "./components/BlogSection";
+import AIChatbot from "./components/AIChatbot";
+import CartDrawer from "./components/CartDrawer";
+import AccountDrawer from "./components/AccountDrawer";
 import { PRODUCTS, CAREER_OPPORTUNITIES, REVIEWS } from "./data";
-import { Product, CareerOpportunity } from "./types";
+import { Product, CareerOpportunity, CartItem } from "./types";
 import heroStingrayImg from "./assets/images/gnod_hero_seafood_1780066797741.png";
 import {
   Award,
@@ -34,7 +37,8 @@ import {
   FileText,
   Upload,
   RefreshCw,
-  Truck
+  Truck,
+  ShoppingBag
 } from "lucide-react";
 
 export default function App() {
@@ -47,6 +51,60 @@ export default function App() {
         behavior: "smooth"
       });
     }
+  };
+
+  // Shopping Cart state
+  const [cartItems, setCartItems] = useState<CartItem[]>(() => {
+    try {
+      const saved = localStorage.getItem("gnod_cart");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isAccountOpen, setIsAccountOpen] = useState(false);
+
+  // Sync cart with localStorage
+  useEffect(() => {
+    localStorage.setItem("gnod_cart", JSON.stringify(cartItems));
+  }, [cartItems]);
+
+  const handleAddToCart = (product: Product, qty: number = 1) => {
+    setCartItems((prevItems) => {
+      const existing = prevItems.find((item) => item.id === product.id);
+      if (existing) {
+        return prevItems.map((item) =>
+          item.id === product.id ? { ...item, quantity: item.quantity + qty } : item
+        );
+      }
+      return [
+        ...prevItems,
+        {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          image: product.image,
+          quantity: qty,
+          unit: product.unit
+        }
+      ];
+    });
+    setIsCartOpen(true);
+  };
+
+  const handleUpdateCartQuantity = (id: string, qty: number) => {
+    setCartItems((prevItems) =>
+      prevItems.map((item) => (item.id === id ? { ...item, quantity: qty } : item))
+    );
+  };
+
+  const handleRemoveCartItem = (id: string) => {
+    setCartItems((prevItems) => prevItems.filter((item) => item.id !== id));
+  };
+
+  const handleClearCart = () => {
+    setCartItems([]);
   };
 
   // Product interactivity state
@@ -205,7 +263,12 @@ export default function App() {
     <div className="bg-brand-sand min-h-screen text-brand-blue-900 selection:bg-brand-blue-100 selection:text-brand-blue-900 transition-colors duration-300">
       
       {/* Sticky header nav */}
-      <Header onOrderNowClick={scrollToProducts} />
+      <Header 
+        onOrderNowClick={scrollToProducts} 
+        cartCount={cartItems.reduce((acc, item) => acc + item.quantity, 0)} 
+        onOpenCart={() => setIsCartOpen(true)} 
+        onOpenAccount={() => setIsAccountOpen(true)}
+      />
 
       {/* Floating Call Bar (Mobile Exclusive) */}
       <div id="mobile-quick-call" className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md shadow-2xl border-t border-brand-blue-100 py-3.5 px-4 flex justify-around items-center lg:hidden">
@@ -618,26 +681,35 @@ export default function App() {
                     </div>
 
                     {/* Button actions on-card */}
-                    <div className="flex gap-2 pt-2 border-t border-slate-50">
+                    <div className="flex flex-col gap-2 pt-2 border-t border-slate-50">
                       <button
-                        onClick={() => {
-                          setSelectedProductDetails(prod);
-                          setOrderQuantity(1);
-                        }}
-                        className="flex-1 py-2 px-3 bg-[#e6f4fe] hover:bg-[#0070f3] text-[#0070f3] hover:text-white rounded-xl text-xs font-bold tracking-wider font-display transition-colors cursor-pointer text-center"
+                        onClick={() => handleAddToCart(prod, 1)}
+                        className="w-full py-2.5 px-4 bg-brand-blue-900 hover:bg-[#0070f3] text-white rounded-xl text-xs font-bold tracking-wider font-display transition-all cursor-pointer flex items-center justify-center space-x-1.5 shadow-sm hover:shadow"
                       >
-                        Xem chi tiết & Specs
+                        <ShoppingBag className="w-3.5 h-3.5 shrink-0" />
+                        <span>Thêm vào giỏ</span>
                       </button>
-                      <button
-                        onClick={() => {
-                          setQuickOrderProduct(prod);
-                          setQuickOrderQty(1);
-                          setIsQuickOrderOpen(true);
-                        }}
-                        className="py-2 px-4 bg-brand-blue-900 hover:bg-[#0070f3] text-white rounded-xl text-xs font-bold tracking-wider font-display transition-colors cursor-pointer"
-                      >
-                        Mua ngay
-                      </button>
+                      <div className="flex gap-2 w-full">
+                        <button
+                          onClick={() => {
+                            setSelectedProductDetails(prod);
+                            setOrderQuantity(1);
+                          }}
+                          className="flex-1 py-1.5 px-2 bg-[#e6f4fe] hover:bg-[#d5ebfe] text-[#0070f3] rounded-lg text-[11px] font-bold tracking-tight font-display transition-colors cursor-pointer text-center"
+                        >
+                          Xem chi tiết
+                        </button>
+                        <button
+                          onClick={() => {
+                            setQuickOrderProduct(prod);
+                            setQuickOrderQty(1);
+                            setIsQuickOrderOpen(true);
+                          }}
+                          className="flex-1 py-1.5 px-2 bg-slate-100 hover:bg-slate-250 text-slate-700 rounded-lg text-[11px] font-bold tracking-tight font-display transition-colors cursor-pointer"
+                        >
+                          Mua nhanh 2H
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1036,22 +1108,7 @@ export default function App() {
             ))}
           </div>
 
-          {/* Inline CTA block */}
-          <div className="mt-12 bg-gradient-to-r from-brand-blue-900 to-brand-blue-800 rounded-3xl p-8 text-center text-white space-y-4 border border-brand-blue-800">
-            <h3 className="font-display font-extrabold text-xl">Lấy Sỉ Sốc & Phát Triển Đối Tác Phân Phối Thương Hiệu</h3>
-            <p className="text-slate-300 text-xs sm:text-sm max-w-2xl mx-auto leading-relaxed">
-              Bạn sở hữu cửa hàng đặc sản địa phương, tiệm tạp hóa cao cấp hay kênh kinh doanh quà Tết? Nhận ngay báo giá sỉ tôm khô đất và khô cá đuối nghệ sụn mắm me độc quyền cực hấp dẫn.
-            </p>
-            <div className="pt-2">
-              <a
-                href="mailto:partner@gnodfood.vn"
-                className="inline-flex items-center space-x-2 bg-white hover:bg-brand-blue-100 text-brand-blue-900 px-6 py-3 rounded-xl font-display font-bold text-xs uppercase tracking-wider transition-all"
-              >
-                <Mail className="w-4 h-4" />
-                <span>Liên hệ phân phối sỉ: partner@gnodfood.vn</span>
-              </a>
-            </div>
-          </div>
+
         </div>
       </section>
 
@@ -1252,12 +1309,22 @@ export default function App() {
             </div>
 
             {/* Footer triggers */}
-            <div className="bg-slate-50 px-6 py-4 border-t border-slate-100 flex justify-end space-x-3">
+            <div className="bg-slate-50 px-6 py-4 border-t border-slate-100 flex justify-end space-x-2.5 sm:space-x-3">
               <button
                 onClick={() => setSelectedProductDetails(null)}
-                className="py-2.5 px-5 hover:bg-slate-100 text-slate-600 rounded-xl text-xs font-bold tracking-wider font-display transition-colors cursor-pointer"
+                className="py-2.5 px-4 hover:bg-slate-100 text-slate-600 rounded-xl text-xs font-bold tracking-tight font-display transition-colors cursor-pointer"
               >
                 Đóng lại
+              </button>
+              <button
+                onClick={() => {
+                  handleAddToCart(selectedProductDetails, orderQuantity);
+                  setSelectedProductDetails(null);
+                }}
+                className="py-2.5 px-4 bg-[#e6f4fe] hover:bg-brand-blue-100 text-[#0070f3] rounded-xl text-xs font-bold tracking-tight font-display transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <ShoppingBag className="w-3.5 h-3.5" />
+                <span>Thêm vào giỏ</span>
               </button>
               <button
                 onClick={() => {
@@ -1266,9 +1333,9 @@ export default function App() {
                   setSelectedProductDetails(null);
                   setIsQuickOrderOpen(true);
                 }}
-                className="py-2.5 px-6 bg-brand-blue-900 hover:bg-[#0070f3] text-white rounded-xl text-xs font-bold tracking-wider font-display transition-colors cursor-pointer shadow-sm"
+                className="py-2.5 px-5 bg-brand-blue-900 hover:bg-[#0070f3] text-white rounded-xl text-xs font-bold tracking-wider font-display transition-colors cursor-pointer shadow-sm"
               >
-                Đặt mua đơn hàng này
+                Đặt mua nhanh hỏa tốc
               </button>
             </div>
 
@@ -1547,6 +1614,25 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Floating Shopping Cart Drawer */}
+      <CartDrawer
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        cartItems={cartItems}
+        onUpdateQuantity={handleUpdateCartQuantity}
+        onRemoveItem={handleRemoveCartItem}
+        onClearCart={handleClearCart}
+      />
+
+      {/* Floating Customer Account Profile & Orders Drawer */}
+      <AccountDrawer
+        isOpen={isAccountOpen}
+        onClose={() => setIsAccountOpen(false)}
+      />
+
+      {/* Floating AI Chatbot Assistant */}
+      <AIChatbot />
 
     </div>
   );

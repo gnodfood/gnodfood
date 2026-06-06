@@ -1,0 +1,98 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global fallback default-deny rule
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    // Hardened Identity & Format Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    
+    function incoming() {
+      return request.resource.data;
+    }
+    
+    function existing() {
+      return resource.data;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    // User profile schema validations
+    function isValidUser(data) {
+      return data.keys().hasAll(['userId', 'displayName', 'email', 'createdAt', 'updatedAt'])
+        && data.keys().size() <= 6
+        && data.userId == request.auth.uid
+        && data.displayName is string && data.displayName.size() > 0 && data.displayName.size() <= 120
+        && data.email is string && data.email.size() > 0 && data.email.size() <= 180
+        && (data.photoURL == null || (data.photoURL is string && data.photoURL.size() <= 600));
+    }
+    
+    // Order schema validation
+    function isValidOrder(data) {
+      return data.keys().hasAll([
+        'orderId', 'ownerId', 'recipientName', 'recipientPhone', 
+        'shippingAddress', 'deliveryMethod', 'items', 'totalAmount', 
+        'shippingFee', 'status', 'createdAt', 'updatedAt'
+      ])
+        && (data.keys().hasAll(['notes']) ? data.keys().size() <= 13 : data.keys().size() <= 12)
+        && data.orderId is string && data.orderId.size() <= 64
+        && data.ownerId == request.auth.uid
+        && data.recipientName is string && data.recipientName.size() > 0 && data.recipientName.size() <= 120
+        && data.recipientPhone is string && data.recipientPhone.size() >= 8 && data.recipientPhone.size() <= 20
+        && data.shippingAddress is string && data.shippingAddress.size() > 0 && data.shippingAddress.size() <= 500
+        && data.deliveryMethod is string && (data.deliveryMethod == 'standard' || data.deliveryMethod == 'express')
+        && data.items is list && data.items.size() > 0 && data.items.size() <= 50
+        // Type validation of first item in list (Total Array Guarding)
+        && data.items[0] is map
+        && data.totalAmount is int && data.totalAmount >= 0
+        && data.shippingFee is int && data.shippingFee >= 0
+        && data.status is string && (data.status == 'pending' || data.status == 'confirmed' || data.status == 'completed' || data.status == 'cancelled');
+    }
+    
+    // Users collection boundaries
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      // Explicitly reject list requests to prevent user listing leaks 
+      allow create: if isOwner(userId) && isValidUser(incoming()) 
+                    && incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isOwner(userId) && isValidUser(incoming()) 
+                    && incoming().createdAt == existing().createdAt && incoming().updatedAt == request.time
+                    && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'updatedAt']);
+      allow delete: if false;
+    }
+    
+    // Orders collection boundaries
+    match /orders/{orderId} {
+      // Secure list query evaluates resource.data to secure the data even if client filters are bypassed
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow get: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      
+      allow create: if isSignedIn() && isValidId(orderId) && isValidOrder(incoming()) 
+                    && incoming().createdAt == request.time && incoming().updatedAt == request.time
+                    && incoming().status == 'pending';
+                    
+      allow update: if isSignedIn() && isValidId(orderId) && isValidOrder(incoming())
+                    && incoming().ownerId == existing().ownerId
+                    && incoming().createdAt == existing().createdAt
+                    && incoming().updatedAt == request.time
+                    && (
+                      // Customers can transition order status from pending to cancelled
+                      (existing().status == 'pending' && incoming().status == 'cancelled' 
+                       && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']))
+                    );
+                    
+      allow delete: if false;
+    }
+  }
+}

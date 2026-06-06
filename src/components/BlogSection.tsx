@@ -92,11 +92,11 @@ export default function BlogSection() {
             <TrendingUp className="w-4 h-4" />
           </div>
           <div>
-            <h4 className="text-sm font-display font-semibold text-brand-blue-900">
-              Công cụ SEO Kiến thức & Từ khóa tìm kiếm nhiều nhất
+            <h4 className="text-sm font-display font-semibold text-brand-blue-900 uppercase tracking-wider">
+              Mọi người cũng tìm kiếm
             </h4>
             <p className="text-[11px] text-slate-500 font-medium">
-              Nội dung chuẩn SEO đã được tối ưu hóa theo các công cụ Google Trends và Keyword Tool
+              Các từ khóa đặc sản biển Gnod Sạch được nhiều thực khách quan tâm hàng đầu
             </p>
           </div>
         </div>
